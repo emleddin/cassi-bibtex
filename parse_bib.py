@@ -37,9 +37,7 @@ def replace_titles(bib_data, cassi_dict):
     Iterate through the existing BibTeX file and update journal titles to the
     CASSI abbreviation.
     """
-    # https://stackoverflow.com/questions/14156473/can-you-write-a-str-replace-using-dictionary-values-in-python
     for entry in bib_data.entries.values():
-        # entry.fields.keys()
         for type,title in entry.fields.items():
             if type.lower() == "journal":
                 x = ''.join(cassi_dict[p.upper()] if p.upper() in
@@ -55,18 +53,9 @@ def replace_titles(bib_data, cassi_dict):
 # Set up the CASSI
 cassi_dict = create_cassi_dict(cassi_csv)
 
-# Read the BIB  and fix titles
+# Read the BibTeX and fix titles
 bib_data = read_bib(bib_in)
 bib_data = replace_titles(bib_data, cassi_dict)
 
-# Write out the new bib data
+# Write out the new BibTeX data
 bib_data.to_file(bib_out, bib_format="bibtex")
-
-# for entry in bib_data.entries.values():
-#     # entry.fields.keys()
-#     for c,v in entry.fields.items():
-#         if c.lower() == "journal":
-#             if v.lower() == "nature":
-#                 v = "Nature"
-#             if v.lower() == "jctc":
-#                 v = "J. Chem. Comput. Theory"
