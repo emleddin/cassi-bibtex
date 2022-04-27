@@ -1,4 +1,4 @@
-# Bib Parser
+# CASSI Bib Parser
 
 This script cleans up the journal names in a `.bib` file to match the
 [CASSI](https://cassi.cas.org/search.jsp) abbreviations.
@@ -12,8 +12,8 @@ The script will print a warning if an abbreviation was not found.
 ## Requirements
 
 Python3 with:
+- bibtexparser
 - pandas
-- pybtex
 - re
 
 ## TODO
@@ -22,4 +22,3 @@ Python3 with:
 - Ensure entries have DOIs
 - Use `--` for page ranges
 - Titlecase for article titles
-- Pretty printing?
