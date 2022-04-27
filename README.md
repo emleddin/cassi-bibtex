@@ -20,5 +20,6 @@ Python3 with:
 
 - Check entries against CrossRef
 - Ensure entries have DOIs
-- Check that DOIs are not formatted as a hyperlink
+- Use `--` for page ranges
 - Titlecase for article titles
+- Pretty printing?
