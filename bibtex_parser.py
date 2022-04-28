@@ -20,6 +20,9 @@ import pandas as pd
 import re
 from titlecase import titlecase
 
+# Set up global variables before definition
+global lower_list, upper_list, ignore_list
+
 #------------------ Variable Set-Up ----------------------
 
 # The CSV with Abbreviation, Publication Name, and CODEN
@@ -29,9 +32,9 @@ bib_in="demo_references.bib"
 # Name for cleaned BibTeX file
 bib_out="demo_references_clean.bib"
 
-global lower_list, upper_list, ignore_list
 # A list of any words in titles that should be lowercase
-lower_list = ['along', 'is', 'a']
+#  Defined as prepositions and articles
+lower_list = ['for', 'or', 'and', 'a', 'the', 'along', 'is']
 # A list of any words in titles that should maintain capitalization
 upper_list = ['DNA', 'RNA']
 # A list of words in titles that shouldn't have capitalization modified
@@ -47,6 +50,15 @@ marked_for_removal_bool = True
 # Case-insensitive list of the groups to remove
 marked_for_removal = ['abstract', 'eprint', 'file', 'pmid', 'pdf',
     'mendeley-groups']
+
+# Do you want to remove all comments from the `.bib`? If `False`, they will all
+#  be clumped together at the top of the output!
+remove_comments = True
+
+# Do you want to put the output in alphabetical order? If `False`, they will
+#  be in the same order as the original `.bib`.
+# alpha_out = True
+alpha_out = False
 
 #------------------ Function Set-Up ----------------------
 
@@ -121,19 +133,24 @@ def fix_title(entry, record, type):
     return entry
 
 def fix_doi(entry, record, type):
-        # Remove hyperlink from DOI if present
-        if record.startswith('https://dx.'):
-            record = record.replace("https://dx.doi.org/", "")
-            # Must update in dictionary!
-            entry.update({type: record})
-        elif record.startswith('https://doi.'):
-            record = record.replace("https://doi.org/", "")
-            # Must update in dictionary!
-            entry.update({type: record})
-        elif not record.startswith('10'):
-            print("\nWARNING: DOI does not start with '10.' for\n    "
-            + f"entry {entry['ID']}. Please confirm its DOI.")
-        return entry
+    # Remove hyperlink from DOI if present
+    if record.startswith('https://dx.'):
+        record = record.replace("https://dx.doi.org/", "")
+        # Must update in dictionary!
+        entry.update({type: record})
+    elif record.startswith('https://doi.'):
+        record = record.replace("https://doi.org/", "")
+        # Must update in dictionary!
+        entry.update({type: record})
+    elif not record.startswith('10'):
+        print("\nWARNING: DOI does not start with '10.' for\n    "
+        + f"entry {entry['ID']}. Please confirm its DOI.")
+    return entry
+
+def warn_author(entry, record):
+    if "and others" in record.lower():
+        print(f"\nWARNING: Author list for {entry['ID']} may be incomplete.\n  "
+        + "  Please check the authors for 'and others'.")
 
 def fix_bib(bib_data, cassi_dict):
     """
@@ -154,16 +171,29 @@ def fix_bib(bib_data, cassi_dict):
             elif type.lower() == "doi":
                 # `record` here is the DOI
                 entry = fix_doi(entry, record, type)
+            # Check author list for "and others"
+            elif type.lower() == "author":
+                warn_author(entry, record)
     return bib_data
 
-def write_file(bib_out, bib_data, bib_write_order):
+def write_file(bib_out, bib_data, bib_write_order, remove_comments, alpha_out):
     """
     Set up printing options for output and write to BibTeX.
     """
     writer = BibTexWriter()
+    # Should comments be written?
+    if remove_comments:
+        writer.contents = ['entries']
+    else:
+        writer.contents = ['comments', 'entries']
+    # Should output order be changed?
+    if alpha_out:
+        writer.order_entries_by = ['ID']
+    else:
+        writer.order_entries_by = None
     # Use 2 spaces for indent
     writer.indent = '  '
-    # Use ACS order for fields within the BiBTeX file
+    # Use ACS order for fields within the BibTeX file
     writer.display_order = bib_write_order
     # Create string for printing
     bibtex_str = writer.write(bib_data)
@@ -195,6 +225,6 @@ bib_data = fix_bib(bib_data, cassi_dict)
 # Remove unnecessary categories and write out the new BibTeX data
 if marked_for_removal_bool:
     bib_data = remove_extraneous(bib_data, marked_for_removal)
-    write_file(bib_out, bib_data, bib_write_order)
+    write_file(bib_out, bib_data, bib_write_order, remove_comments, alpha_out)
 else:
-    write_file(bib_out, bib_data, bib_write_order)
+    write_file(bib_out, bib_data, bib_write_order, remove_comments, alpha_out)
