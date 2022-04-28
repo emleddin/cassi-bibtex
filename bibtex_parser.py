@@ -5,10 +5,11 @@ Clean up a BibTeX file by:
 2. Changing article titles to Title Case
 3. Removing preceding hyperlink information from DOI fields (and warning if
    a DOI does not start with `10.`)
-4. Deleting requested fields from the file (if any)
-5. Printing with indentation in a user-specified field order
+4. Ensuring page ranges use en-dashes
+5. Deleting requested fields from the file (if any)
+6. Printing with indentation in a user-specified field order
 
-27 Apr 2022 by Emmett Leddin
+28 Apr 2022 by Emmett Leddin
 """
 
 #------------------ Import Modules ----------------------
@@ -65,16 +66,35 @@ alpha_out = False
 def create_cassi_dict(cassi_csv):
     """
     Initialize the CASSI dictionary from CSV.
+
+    Parameters
+    ----------
+    cassi_csv : CSV file
+        CSV file with header "Abbreviation,PubTitle,CODEN".
+
+    Returns
+    -------
+    cassi_dict : dict
+        Dictionary with `PublicationName` as keys and `Abbreviations` as values.
+        This way several titles or title variations can produce the same result.
     """
     c_df = pd.read_csv(cassi_csv, header=0)
-    # Make Abbreviation the value, since several title variations should
-    #  produce the same result
     cassi_dict = dict(zip(c_df.PubTitle, c_df.Abbreviation))
     return cassi_dict
 
 def read_bib(bib_in):
     """
     Parse the BibTeX file.
+
+    Parameters
+    ----------
+    bib_in : BibTeX file
+        Input BibTeX file.
+
+    Returns
+    -------
+    bib_data: bibtexparser.bibdatabase.BibDatabase
+        Database of information from the BibTeX file.
     """
     parser = BibTexParser()
     # Use False to keep stuff like @software
@@ -90,6 +110,17 @@ def read_bib(bib_in):
 def fix_journal(entry, record, type, cassi_dict):
     """
     Update journal titles to the CASSI abbreviation.
+
+    Parameters
+    ----------
+    entry : dict
+        Fields as keys and entry values as values from the BibTeX file.
+    record : entry.values()
+        The value for a given field in the BibTeX file.
+    type : entry.keys()
+        The field type from the BibTeX file (e.g., 'authors').
+    cassi_dict : dict
+        `PublicationName` as keys and `Abbreviations` as values.
     """
     # Skip anything that's already right
     if record in cassi_dict.values():
@@ -115,6 +146,13 @@ def fix_journal(entry, record, type, cassi_dict):
 def title_check(word, all_caps):
     """
     Check through the list of lowercase and uppercase words when fixing titles.
+
+    Parameters
+    ----------
+    word : str
+        The word to check capitalization rules for.
+    all_caps : bool
+        True for entire string in all caps. Required for callback function.
     """
     if word in ignore_list:
         return word
@@ -210,7 +248,20 @@ def fix_bib(bib_data, cassi_dict):
 
 def write_file(bib_out, bib_data, bib_write_order, remove_comments, alpha_out):
     """
-    Set up printing options for output and write to BibTeX.
+    Set up printing options for output and write to BibTeX (bib_out).
+
+    Parameters
+    ----------
+    bib_out : str
+        Name of the output file.
+    bib_data: bibtexparser.bibdatabase.BibDatabase
+        Database of information from the BibTeX file.
+    bib_write_order : list
+        Ordered list for writing fields in the output.
+    remove_comments: bool
+        True to remove comments, False to keep them.
+    alpha_out : bool
+        True for alphabetical, False to retain order from input.
     """
     writer = BibTexWriter()
     # Should comments be written?
@@ -236,6 +287,13 @@ def write_file(bib_out, bib_data, bib_write_order, remove_comments, alpha_out):
 def remove_extraneous(bib_data, marked_for_removal):
     """
     Remove any extraneous fields (ex: `mendeley-groups`).
+
+    Parameters
+    ----------
+    bib_data: bibtexparser.bibdatabase.BibDatabase
+        Database of information from the BibTeX file.
+    marked_for_removal : list
+        List of parameters to remove from the BibTeX file.
     """
     for entry in bib_data.entries:
         for marked in marked_for_removal:
