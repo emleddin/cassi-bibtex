@@ -42,7 +42,7 @@ def read_bib(bib_in):
     Parse the BibTeX file.
     """
     parser = BibTexParser()
-    # Keep stuff like @software
+    # Use False to keep stuff like @software
     parser.ignore_nonstandard_types = False
     # Sanitize fields and convert to lowercase
     parser.homogenize_fields = True
@@ -51,6 +51,43 @@ def read_bib(bib_in):
     with open(bib_in) as my_bib:
         bib_data = bibtexparser.load(my_bib, parser)
     return bib_data
+
+def fix_journal(entry, record, type, cassi_dict):
+    # Skip anything that's already right
+    if record in cassi_dict.values():
+        pass
+    # Get anything from the dictionary
+    elif record in cassi_dict.keys():
+        record = cassi_dict[record]
+        entry.update({type: record})
+    else:
+        # Check if uppercasing value works (case of jctc)
+        x = ''.join(cassi_dict[p.upper()] if p.upper() in
+         cassi_dict else p for p in re.split(r'(\W+)', record))
+        # If the uppercase does work, update the dictionary
+        if record.upper() in str(cassi_dict.keys()).upper():
+            entry.update({type: x})
+        # Not a known match; print a warning
+        elif x not in cassi_dict.keys():
+            print("\nWARNING: JOURNAL abbreviation for\n    "
+            + f"'{record}' in entry {entry['ID']}\n  "
+            + "is unknown. Please check CASSI directly.")
+    return entry
+
+def fix_doi(entry, record, type):
+        # Remove hyperlink from DOI if present
+        if record.startswith('https://dx.'):
+            record = record.replace("https://dx.doi.org/", "")
+            # Must update in dictionary!
+            entry.update({type: record})
+        elif record.startswith('https://doi.'):
+            record = record.replace("https://doi.org/", "")
+            # Must update in dictionary!
+            entry.update({type: record})
+        elif not record.startswith('10'):
+            print("\nWARNING: DOI does not start with '10.' for\n    "
+            + f"entry {entry['ID']}. Please confirm its DOI.")
+        return entry
 
 def fix_bib(bib_data, cassi_dict):
     """
@@ -62,40 +99,11 @@ def fix_bib(bib_data, cassi_dict):
             # Process journal entries
             if type.lower() == "journal":
                 # `record` here is the journal title
-                # Skip anything that's already right
-                if record in cassi_dict.values():
-                    continue
-                # Get anything from the dictionary
-                if record in cassi_dict.keys():
-                    record = cassi_dict[record]
-                    entry.update({type: record})
-                else:
-                    # Check if uppercasing value works (case of jctc)
-                    x = ''.join(cassi_dict[p.upper()] if p.upper() in
-                     cassi_dict else p for p in re.split(r'(\W+)', record))
-                    # If the uppercase does work, update the dictionary
-                    if record.upper() in str(cassi_dict.keys()).upper():
-                        entry.update({type: x})
-                    # Not a known match; print a warning
-                    elif x not in cassi_dict.keys():
-                        print("\nWARNING: JOURNAL abbreviation for\n    "
-                        + f"'{record}' in entry {entry['ID']}\n  "
-                        + "is unknown. Please check CASSI directly.")
+                entry = fix_journal(entry, record, type, cassi_dict)
             # Process DOIs
             elif type.lower() == "doi":
                 # `record` here is the DOI
-                # Remove hyperlink from DOI if present
-                if record.startswith('https://dx.'):
-                    record = record.replace("https://dx.doi.org/", "")
-                    # Must update in dictionary!
-                    entry.update({type: record})
-                elif record.startswith('https://doi.'):
-                    record = record.replace("https://doi.org/", "")
-                    # Must update in dictionary!
-                    entry.update({type: record})
-                elif not record.startswith('10'):
-                    print("\nWARNING: DOI does not start with '10.' for\n    "
-                    + f"entry {entry['ID']}. Please confirm its DOI.")
+                entry = fix_doi(entry, record, type)
     return bib_data
 
 def write_file(bib_out, bib_data, bib_write_order):
@@ -135,6 +143,6 @@ bib_data = fix_bib(bib_data, cassi_dict)
 # Remove unnecessary categories and write out the new BibTeX data
 if marked_for_removal_bool:
     bib_data = remove_extraneous(bib_data, marked_for_removal)
-    write_file(bib_out, bib_data)
+    write_file(bib_out, bib_data, bib_write_order)
 else:
-    write_file(bib_out, bib_data)
+    write_file(bib_out, bib_data, bib_write_order)
