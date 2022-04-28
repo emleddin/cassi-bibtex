@@ -1,9 +1,24 @@
 #!/usr/bin/env python3
+"""
+Clean up a BibTeX file by:
+1. Making journal titles their CASSI abbreviation (and warning if not found)
+2. Changing article titles to Title Case
+3. Removing preceding hyperlink information from DOI fields (and warning if
+   a DOI does not start with `10.`)
+4. Deleting requested fields from the file (if any)
+5. Printing with indentation in a user-specified field order
+
+27 Apr 2022 by Emmett Leddin
+"""
+
+#------------------ Import Modules ----------------------
+
 import bibtexparser
 from bibtexparser.bparser import BibTexParser
 from bibtexparser.bwriter import BibTexWriter
 import pandas as pd
 import re
+from titlecase import titlecase
 
 #------------------ Variable Set-Up ----------------------
 
@@ -13,6 +28,14 @@ cassi_csv = 'cassi_coden.csv'
 bib_in="demo_references.bib"
 # Name for cleaned BibTeX file
 bib_out="demo_references_clean.bib"
+
+global lower_list, upper_list, ignore_list
+# A list of any words in titles that should be lowercase
+lower_list = ['along', 'is', 'a']
+# A list of any words in titles that should maintain capitalization
+upper_list = ['DNA', 'RNA']
+# A list of words in titles that shouldn't have capitalization modified
+ignore_list = ["ff19SB"]
 
 # A list in order of how to write lines within a BibTeX entry.
 # Extras are appended to the end alphabetically
@@ -74,6 +97,29 @@ def fix_journal(entry, record, type, cassi_dict):
             + "is unknown. Please check CASSI directly.")
     return entry
 
+def title_check(word, all_caps):
+    """
+    Check through the list of lowercase and uppercase words when fixing titles.
+    """
+    if word in ignore_list:
+        return word
+    elif word.upper() in upper_list:
+        return word.upper()
+    elif word.lower() in lower_list:
+        return word.lower()
+    elif all_caps == True:
+        # Ignore if word is encased in braces (common in BibTeX files)
+        if re.search(r'\{\w+\}', word):
+            return word
+        else:
+            return word.lower().capitalize()
+
+def fix_title(entry, record, type):
+    # Change case!
+    record = titlecase(record, callback=title_check)
+    entry.update({type: record})
+    return entry
+
 def fix_doi(entry, record, type):
         # Remove hyperlink from DOI if present
         if record.startswith('https://dx.'):
@@ -100,6 +146,10 @@ def fix_bib(bib_data, cassi_dict):
             if type.lower() == "journal":
                 # `record` here is the journal title
                 entry = fix_journal(entry, record, type, cassi_dict)
+            # Process article titles --> provide Title Case
+            elif type.lower() == "title":
+                # `record` here is the article title
+                entry = fix_title(entry, record, type)
             # Process DOIs
             elif type.lower() == "doi":
                 # `record` here is the DOI
@@ -107,6 +157,9 @@ def fix_bib(bib_data, cassi_dict):
     return bib_data
 
 def write_file(bib_out, bib_data, bib_write_order):
+    """
+    Set up printing options for output and write to BibTeX.
+    """
     writer = BibTexWriter()
     # Use 2 spaces for indent
     writer.indent = '  '
@@ -118,10 +171,9 @@ def write_file(bib_out, bib_data, bib_write_order):
     with open(bib_out, 'w+') as f:
         f.write(bibtex_str)
 
-# This function exists because pybtex does not currently allow field deletion
 def remove_extraneous(bib_data, marked_for_removal):
     """
-    Remove any bad fields.
+    Remove any extraneous fields (ex: `mendeley-groups`).
     """
     for entry in bib_data.entries:
         for marked in marked_for_removal:
