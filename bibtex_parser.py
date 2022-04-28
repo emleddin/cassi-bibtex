@@ -88,6 +88,9 @@ def read_bib(bib_in):
     return bib_data
 
 def fix_journal(entry, record, type, cassi_dict):
+    """
+    Update journal titles to the CASSI abbreviation.
+    """
     # Skip anything that's already right
     if record in cassi_dict.values():
         pass
@@ -127,12 +130,18 @@ def title_check(word, all_caps):
             return word.lower().capitalize()
 
 def fix_title(entry, record, type):
+    """
+    Convert 'title' entries to Title Case.
+    """
     # Change case!
     record = titlecase(record, callback=title_check)
     entry.update({type: record})
     return entry
 
 def fix_doi(entry, record, type):
+    """
+    Remove hyperlinks from DOIs and warn if a DOI does not start with '10.'.
+    """
     # Remove hyperlink from DOI if present
     if record.startswith('https://dx.'):
         record = record.replace("https://dx.doi.org/", "")
@@ -164,14 +173,16 @@ def fix_pages(entry, record, type):
     return entry
 
 def warn_author(entry, record):
+    """
+    Print a warning if the author list includes 'and others'.
+    """
     if "and others" in record.lower():
         print(f"\nWARNING: Author list for {entry['ID']} may be incomplete.\n  "
         + "  Please check the authors for 'and others'.")
 
 def fix_bib(bib_data, cassi_dict):
     """
-    Iterate through the existing BibTeX file, update journal titles to the
-    CASSI abbreviation, and fix DOIs.
+    Iterate through the existing BibTeX file and correct entry formatting.
     """
     for entry in bib_data.entries:
         for type,record in entry.items():
@@ -193,6 +204,8 @@ def fix_bib(bib_data, cassi_dict):
             # Check author list for "and others"
             elif type.lower() == "author":
                 warn_author(entry, record)
+        if "doi" not in str(entry.keys()).lower():
+             print(f"\nWARNING: No DOI field in entry {entry['ID']}")
     return bib_data
 
 def write_file(bib_out, bib_data, bib_write_order, remove_comments, alpha_out):

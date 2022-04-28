@@ -62,5 +62,4 @@ pip install -r requirements.txt
 ## TODO
 
 - Check entries against CrossRef
-- Print a warning for entries without DOIs
 
