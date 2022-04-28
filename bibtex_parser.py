@@ -147,6 +147,22 @@ def fix_doi(entry, record, type):
         + f"entry {entry['ID']}. Please confirm its DOI.")
     return entry
 
+def fix_pages(entry, record, type):
+    """
+    Change page ranges to a en-dash.
+    """
+    # Hyphen
+    if re.search('-', record) and not re.search('--', record):
+        record = record.replace('-', '--')
+        # Must update in dictionary!
+        entry.update({type: record})
+    # Space
+    elif re.search(' ', record) and not re.search('--', record):
+        record = record.replace(' ', '--')
+        # Must update in dictionary!
+        entry.update({type: record})
+    return entry
+
 def warn_author(entry, record):
     if "and others" in record.lower():
         print(f"\nWARNING: Author list for {entry['ID']} may be incomplete.\n  "
@@ -171,6 +187,9 @@ def fix_bib(bib_data, cassi_dict):
             elif type.lower() == "doi":
                 # `record` here is the DOI
                 entry = fix_doi(entry, record, type)
+            # Process page ranges
+            elif type.lower() == "pages":
+                entry = fix_pages(entry, record, type)
             # Check author list for "and others"
             elif type.lower() == "author":
                 warn_author(entry, record)

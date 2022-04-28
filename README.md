@@ -63,4 +63,4 @@ pip install -r requirements.txt
 
 - Check entries against CrossRef
 - Print a warning for entries without DOIs
-- Use `--` for page ranges
+
